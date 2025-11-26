@@ -1,79 +1,65 @@
-# Project Description
+Project Description
+Deployed Frontend URL: https://sol-journal-two.vercel.app/
 
-**Deployed Frontend URL:** [TODO: Link to your deployed frontend]
+Solana Program ID: EJTGjYQmVnedbzSTHGoqx67n5Pe4w9hnYa72C8DkBx3t
 
-**Solana Program ID:** [TODO: Your deployed program's public key]
+Project Overview
+Description
+"Solana Journal" is a decentralized content application built on the Solana blockchain. It allows users to create persistent, on-chain journal entries where they are the sole owners of the data. Unlike Web2 journaling apps, data here is censorship-resistant and stored permanently on the blockchain. This dApp demonstrates core Solana concepts including Program Derived Addresses (PDAs), space allocation, and React-to-Anchor integration.
 
-## Project Overview
+Key Features
+Create Entry: Users can mint a new Journal Entry account by providing a unique title and message.
+On-Chain Storage: All data (Title, Message, Owner) is stored directly in Solana accounts, not in a database.
+Duplicate Prevention: The smart contract logic prevents creating two entries with the same title for the same user.
+Wallet Integration: Seamless connection with Phantom and Solflare wallets via the Solana Wallet Adapter.
+How to Use the dApp
+Connect Wallet: Click "Select Wallet" in the top right to connect Phantom/Solflare (Devnet).
+Write Entry: Enter a unique "Title" and your "Message" in the form.
+Mint: Click "Mint Entry". This will prompt your wallet to sign a transaction.
+View: Click "Refresh List" to fetch and display your personal journal entries from the blockchain.
+Program Architecture
+The Journal dApp uses a PDA-based architecture to manage data. Instead of a single large account holding all entries, every specific entry is its own independent account on the blockchain.
 
-### Description
-[TODO: Provide a comprehensive description of your dApp. Explain what it does. Be detailed about the core functionality.]
+PDA Usage
+The program uses Program Derived Addresses (PDAs) to deterministically locate entries without needing a centralized database index.
 
-### Key Features
-[TODO: List the main features of your dApp. Be specific about what users can do.]
+PDA Seeds:
 
-- Feature 1: [Description]
-- Feature 2: [Description]
-- ...
-  
-### How to Use the dApp
-[TODO: Provide step-by-step instructions for users to interact with your dApp]
+Journal Entry PDA: Derived from seeds [title_as_bytes, owner_public_key].
+Purpose: This seed combination ensures that every "Title" is unique per user. If a user tries to create an entry with a title they already used, the PDA collision detection will fail the transaction (Unhappy Path).
+Program Instructions
+Instructions Implemented:
 
-1. **Connect Wallet**
-2. **Main Action 1:** [Step-by-step instructions]
-3. **Main Action 2:** [Step-by-step instructions]
-4. ...
-
-## Program Architecture
-[TODO: Describe your Solana program's architecture. Explain the main instructions, account structures, and data flow.]
-
-### PDA Usage
-[TODO: Explain how you implemented Program Derived Addresses (PDAs) in your project. What seeds do you use and why?]
-
-**PDAs Used:**
-- PDA 1: [Purpose and description]
-- PDA 2: [Purpose and description]
-
-### Program Instructions
-[TODO: List and describe all the instructions in your Solana program]
-
-**Instructions Implemented:**
-- Instruction 1: [Description of what it does]
-- Instruction 2: [Description of what it does]
-- ...
-
-### Account Structure
-[TODO: Describe your main account structures and their purposes]
-
-```rust
-// Example account structure (replace with your actual structs)
+create_entry: Initializes a new PDA account, sets the owner, and saves the title/message data.
+update_entry: Allows the owner to overwrite the message of an existing entry.
+delete_entry: Closes the entry account and refunds the rent (SOL) back to the user.
+Account Structure
 #[account]
-pub struct YourAccountName {
-    // Describe each field
+#[derive(InitSpace)]
+pub struct JournalEntry {
+pub owner: Pubkey, // The wallet that owns this entry
+#[max_len(50)]
+pub title: String, // Unique identifier for this user
+#[max_len(1000)]
+pub message: String, // The content of the journal
 }
-```
 
-## Testing
+Testing
+Test Coverage
+I implemented a comprehensive TypeScript test suite (tests/anchor.test.ts) to verify the smart contract logic before frontend integration.
 
-### Test Coverage
-[TODO: Describe your testing approach and what scenarios you covered]
+Happy Path Tests:
 
-**Happy Path Tests:**
-- Test 1: [Description]
-- Test 2: [Description]
-- ...
+Create Entry: Successfully mints a new PDA with the correct title and message.
+Duplicate Prevention: Smart contract logic prevents reusing the same title.
+Update Entry: Verifies that the message can be changed on an existing account.
+Delete Entry: Verifies that the account is closed and data is removed.
+Unhappy Path Tests:
 
-**Unhappy Path Tests:**
-- Test 1: [Description of error scenario]
-- Test 2: [Description of error scenario]
-- ...
-
-### Running Tests
-```bash
-# Commands to run your tests
+Prevent Duplicate: Intentionally tries to create an entry with a title that already exists. The test confirms that the program correctly throws an error and rejects the transaction.
+Running Tests
+# Run the test suite in Solana Playground or Local Anchor
 anchor test
-```
 
-### Additional Notes for Evaluators
-
-[TODO: Add any specific notes or context that would help evaluators understand your project better]
+Additional Notes for Evaluators
+This project was built using Solana Playground for the Smart Contract and React/Vite for the Frontend. I encountered significant challenges with the Anchor Provider and Wallet Adapter causing race conditions (specifically the _bn error) during page load. I solved this by implementing a "Raw Transaction" strategy in the frontend. Instead of relying on the Anchor Provider to sign, I manually constructed the transaction instructions using the IDL and sent them via the standard wallet.sendTransaction method. This ensured reliability across different wallet states and prevented common RPC timeouts. I encountered several challenges with the Anchor Provider and Wallet Adapter race conditions (specifically the _bn error). I solved this by implementing a "Raw Transaction" strategy in the frontend, manually constructing the transaction and using sendTransaction to ensure reliability across different wallet states.
